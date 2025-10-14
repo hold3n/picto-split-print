@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Download, Printer } from "lucide-react";
 import { generatePosterPDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 const Index = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -19,10 +23,44 @@ const Index = () => {
     overlap: 10,
   });
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    
+    // If it's a PDF, render it to canvas first for preview
+    if (file.type === "application/pdf") {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdfDoc = await loadingTask.promise;
+        const page = await pdfDoc.getPage(1);
+        
+        // Render at higher scale for better quality
+        const viewport = page.getViewport({ scale: 2.0 });
+        
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d")!;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({
+          canvasContext: ctx,
+          viewport: viewport,
+          canvas: canvas,
+        }).promise;
+
+        // Convert canvas to data URL for preview
+        const imageUrl = canvas.toDataURL("image/jpeg", 0.95);
+        setPreviewUrl(imageUrl);
+        toast.success("PDF caricato e renderizzato per l'anteprima!");
+      } catch (error) {
+        console.error("Errore nel rendering del PDF:", error);
+        toast.error("Errore nel caricamento del PDF");
+      }
+    } else {
+      // For images, use direct URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
   };
 
   const handleGenerate = async () => {
