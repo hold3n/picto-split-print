@@ -8,11 +8,9 @@ import { generatePosterPDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker from node_modules
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+// Configure PDF.js worker - v3 compatibility
+const pdfjsVersion = '3.11.174';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
 
 const Index = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
