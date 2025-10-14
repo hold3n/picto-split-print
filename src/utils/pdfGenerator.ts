@@ -2,8 +2,11 @@ import jsPDF from "jspdf";
 import { PrintOptions } from "@/components/OptionsPanel";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker from node_modules
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 const PAGE_FORMATS = {
   A4: { width: 210, height: 297 },
@@ -135,7 +138,6 @@ const generateFromPDF = async (
   await page.render({
     canvasContext: ctx,
     viewport: viewport,
-    canvas: canvas,
   }).promise;
 
   // Convert canvas to image and use the same logic as images

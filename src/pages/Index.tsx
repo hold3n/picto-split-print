@@ -8,8 +8,11 @@ import { generatePosterPDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker from node_modules
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 const Index = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -45,7 +48,6 @@ const Index = () => {
         await page.render({
           canvasContext: ctx,
           viewport: viewport,
-          canvas: canvas,
         }).promise;
 
         // Convert canvas to data URL for preview
