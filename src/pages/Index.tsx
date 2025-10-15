@@ -23,6 +23,7 @@ const Index = () => {
     orientation: "portrait",
     overlap: 10,
   });
+  const [defaultOptions, setDefaultOptions] = useState<PrintOptions | null>(null);
 
   const calculateOptimalGrid = (imageWidth: number, imageHeight: number, pageFormat: string) => {
     const formats = {
@@ -97,7 +98,9 @@ const Index = () => {
           viewport.height,
           options.pageFormat
         );
-        setOptions(prev => ({ ...prev, columns, rows, orientation }));
+        const newOptions = { ...options, columns, rows, orientation };
+        setOptions(newOptions);
+        setDefaultOptions(newOptions);
         
         toast.success("PDF caricato e renderizzato per l'anteprima!");
       } catch (error) {
@@ -116,7 +119,9 @@ const Index = () => {
           img.height,
           options.pageFormat
         );
-        setOptions(prev => ({ ...prev, columns, rows, orientation }));
+        const newOptions = { ...options, columns, rows, orientation };
+        setOptions(newOptions);
+        setDefaultOptions(newOptions);
         toast.success("Immagine caricata con griglia ottimale!");
       };
       
@@ -175,7 +180,14 @@ const Index = () => {
           {/* Left Column - Upload & Options */}
           <div className="space-y-6">
             <FileUpload onFileSelect={handleFileSelect} />
-            {selectedFile && <OptionsPanel options={options} onChange={setOptions} />}
+            {selectedFile && (
+              <OptionsPanel 
+                options={options} 
+                onChange={setOptions}
+                defaultOptions={defaultOptions}
+                onResetToDefault={() => defaultOptions && setOptions(defaultOptions)}
+              />
+            )}
           </div>
 
           {/* Right Column - Preview */}

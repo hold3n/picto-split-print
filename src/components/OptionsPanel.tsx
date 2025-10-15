@@ -2,7 +2,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Grid, Maximize, Ruler } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Grid, Maximize, Ruler, RotateCcw } from "lucide-react";
 
 export interface PrintOptions {
   columns: number;
@@ -15,15 +16,37 @@ export interface PrintOptions {
 interface OptionsPanelProps {
   options: PrintOptions;
   onChange: (options: PrintOptions) => void;
+  defaultOptions: PrintOptions | null;
+  onResetToDefault: () => void;
 }
 
-export const OptionsPanel = ({ options, onChange }: OptionsPanelProps) => {
+export const OptionsPanel = ({ options, onChange, defaultOptions, onResetToDefault }: OptionsPanelProps) => {
+  const hasChanges = defaultOptions && (
+    options.columns !== defaultOptions.columns ||
+    options.rows !== defaultOptions.rows ||
+    options.orientation !== defaultOptions.orientation ||
+    options.pageFormat !== defaultOptions.pageFormat
+  );
+
   return (
     <Card className="p-6 bg-gradient-to-br from-card to-background border-border shadow-[var(--shadow-soft)]">
-      <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-foreground">
-        <Grid className="w-5 h-5 text-primary" />
-        Opzioni di Stampa
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
+          <Grid className="w-5 h-5 text-primary" />
+          Opzioni di Stampa
+        </h2>
+        {hasChanges && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onResetToDefault}
+            className="gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Default
+          </Button>
+        )}
+      </div>
 
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
