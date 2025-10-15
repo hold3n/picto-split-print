@@ -24,19 +24,22 @@ const Index = () => {
     overlap: 10,
   });
 
-  const calculateOptimalGrid = (imageWidth: number, imageHeight: number, pageFormat: string, orientation: string) => {
+  const calculateOptimalGrid = (imageWidth: number, imageHeight: number, pageFormat: string) => {
     const formats = {
       A4: { width: 210, height: 297 },
       A3: { width: 297, height: 420 },
       Letter: { width: 216, height: 279 },
     };
     
+    // Determine optimal orientation based on image aspect ratio
+    const imageAspect = imageWidth / imageHeight;
+    const optimalOrientation: "portrait" | "landscape" = imageAspect > 1 ? "landscape" : "portrait";
+    
     const format = formats[pageFormat as keyof typeof formats];
-    const pageWidth = orientation === "portrait" ? format.width : format.height;
-    const pageHeight = orientation === "portrait" ? format.height : format.width;
+    const pageWidth = optimalOrientation === "portrait" ? format.width : format.height;
+    const pageHeight = optimalOrientation === "portrait" ? format.height : format.width;
     
     // Calculate aspect ratios
-    const imageAspect = imageWidth / imageHeight;
     const pageAspect = pageWidth / pageHeight;
     
     // Calculate optimal columns and rows
@@ -57,7 +60,7 @@ const Index = () => {
     columns = Math.min(10, Math.max(1, columns));
     rows = Math.min(10, Math.max(1, rows));
     
-    return { columns, rows };
+    return { columns, rows, orientation: optimalOrientation };
   };
 
   const handleFileSelect = async (file: File) => {
@@ -89,13 +92,12 @@ const Index = () => {
         setPreviewUrl(imageUrl);
         
         // Calculate optimal grid based on PDF dimensions
-        const { columns, rows } = calculateOptimalGrid(
+        const { columns, rows, orientation } = calculateOptimalGrid(
           viewport.width,
           viewport.height,
-          options.pageFormat,
-          options.orientation
+          options.pageFormat
         );
-        setOptions(prev => ({ ...prev, columns, rows }));
+        setOptions(prev => ({ ...prev, columns, rows, orientation }));
         
         toast.success("PDF caricato e renderizzato per l'anteprima!");
       } catch (error) {
@@ -109,13 +111,12 @@ const Index = () => {
       
       img.onload = () => {
         // Calculate optimal grid based on image dimensions
-        const { columns, rows } = calculateOptimalGrid(
+        const { columns, rows, orientation } = calculateOptimalGrid(
           img.width,
           img.height,
-          options.pageFormat,
-          options.orientation
+          options.pageFormat
         );
-        setOptions(prev => ({ ...prev, columns, rows }));
+        setOptions(prev => ({ ...prev, columns, rows, orientation }));
         toast.success("Immagine caricata con griglia ottimale!");
       };
       
