@@ -5,9 +5,25 @@ interface PreviewGridProps {
   imageUrl: string;
   columns: number;
   rows: number;
+  pageFormat: "A4" | "A3" | "Letter";
+  orientation: "portrait" | "landscape";
 }
 
-export const PreviewGrid = ({ imageUrl, columns, rows }: PreviewGridProps) => {
+const getPageAspectRatio = (format: "A4" | "A3" | "Letter", orientation: "portrait" | "landscape"): number => {
+  const formats = {
+    A4: { width: 210, height: 297 },
+    A3: { width: 297, height: 420 },
+    Letter: { width: 216, height: 279 },
+  };
+  
+  const { width, height } = formats[format];
+  const ratio = orientation === "portrait" ? height / width : width / height;
+  return ratio;
+}
+
+export const PreviewGrid = ({ imageUrl, columns, rows, pageFormat, orientation }: PreviewGridProps) => {
+  const aspectRatio = getPageAspectRatio(pageFormat, orientation);
+  
   return (
     <Card className="p-6 bg-gradient-to-br from-card to-background border-border shadow-[var(--shadow-soft)]">
       <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-foreground">
@@ -15,7 +31,10 @@ export const PreviewGrid = ({ imageUrl, columns, rows }: PreviewGridProps) => {
         Anteprima Divisione
       </h2>
 
-      <div className="relative w-full aspect-[3/4] bg-muted rounded-lg overflow-hidden border border-border">
+      <div 
+        className="relative w-full bg-muted rounded-lg overflow-hidden border border-border"
+        style={{ aspectRatio: `${1 / aspectRatio}` }}
+      >
         <img
           src={imageUrl}
           alt="Preview"

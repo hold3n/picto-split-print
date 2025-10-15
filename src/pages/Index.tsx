@@ -123,6 +123,8 @@ const Index = () => {
                 imageUrl={previewUrl}
                 columns={options.columns}
                 rows={options.rows}
+                pageFormat={options.pageFormat}
+                orientation={options.orientation}
               />
             ) : (
               <div className="h-full flex items-center justify-center p-12 border-2 border-dashed border-border rounded-lg bg-card">
