@@ -32,7 +32,7 @@ export const PreviewGrid = ({ imageUrl, columns, rows, pageFormat, orientation }
       </h2>
 
       <div 
-        className="relative w-full bg-muted rounded-lg overflow-hidden border border-border"
+        className="relative w-full max-h-[600px] bg-muted rounded-lg overflow-hidden border border-border"
         style={{ aspectRatio: `${1 / aspectRatio}` }}
       >
         <img
