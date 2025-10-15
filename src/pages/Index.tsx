@@ -24,6 +24,42 @@ const Index = () => {
     overlap: 10,
   });
 
+  const calculateOptimalGrid = (imageWidth: number, imageHeight: number, pageFormat: string, orientation: string) => {
+    const formats = {
+      A4: { width: 210, height: 297 },
+      A3: { width: 297, height: 420 },
+      Letter: { width: 216, height: 279 },
+    };
+    
+    const format = formats[pageFormat as keyof typeof formats];
+    const pageWidth = orientation === "portrait" ? format.width : format.height;
+    const pageHeight = orientation === "portrait" ? format.height : format.width;
+    
+    // Calculate aspect ratios
+    const imageAspect = imageWidth / imageHeight;
+    const pageAspect = pageWidth / pageHeight;
+    
+    // Calculate optimal columns and rows
+    let columns = 1;
+    let rows = 1;
+    
+    if (imageAspect > pageAspect) {
+      // Image is wider, prioritize columns
+      columns = Math.ceil(imageWidth / (imageHeight * pageAspect));
+      rows = Math.max(1, Math.ceil(columns / imageAspect));
+    } else {
+      // Image is taller, prioritize rows
+      rows = Math.ceil(imageHeight / (imageWidth / pageAspect));
+      columns = Math.max(1, Math.ceil(rows * imageAspect));
+    }
+    
+    // Limit to reasonable values
+    columns = Math.min(10, Math.max(1, columns));
+    rows = Math.min(10, Math.max(1, rows));
+    
+    return { columns, rows };
+  };
+
   const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
     
@@ -51,14 +87,39 @@ const Index = () => {
         // Convert canvas to data URL for preview
         const imageUrl = canvas.toDataURL("image/jpeg", 0.95);
         setPreviewUrl(imageUrl);
+        
+        // Calculate optimal grid based on PDF dimensions
+        const { columns, rows } = calculateOptimalGrid(
+          viewport.width,
+          viewport.height,
+          options.pageFormat,
+          options.orientation
+        );
+        setOptions(prev => ({ ...prev, columns, rows }));
+        
         toast.success("PDF caricato e renderizzato per l'anteprima!");
       } catch (error) {
         console.error("Errore nel rendering del PDF:", error);
         toast.error("Errore nel caricamento del PDF");
       }
     } else {
-      // For images, use direct URL
+      // For images, load and get dimensions
       const url = URL.createObjectURL(file);
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate optimal grid based on image dimensions
+        const { columns, rows } = calculateOptimalGrid(
+          img.width,
+          img.height,
+          options.pageFormat,
+          options.orientation
+        );
+        setOptions(prev => ({ ...prev, columns, rows }));
+        toast.success("Immagine caricata con griglia ottimale!");
+      };
+      
+      img.src = url;
       setPreviewUrl(url);
     }
   };
