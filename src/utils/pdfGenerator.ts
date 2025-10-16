@@ -17,28 +17,95 @@ const getCellCode = (col: number, row: number): string => {
   return `${colLetter}${row + 1}`;
 };
 
-const addCropMarks = (pdf: jsPDF, pageWidth: number, pageHeight: number, margin: number = 10) => {
-  const markLength = 5;
-  const markOffset = 3;
+const addOverlapCropMarks = (
+  pdf: jsPDF,
+  imgX: number,
+  imgY: number,
+  imgWidth: number,
+  imgHeight: number,
+  overlapX: number,
+  overlapY: number,
+  hasLeft: boolean,
+  hasRight: boolean,
+  hasTop: boolean,
+  hasBottom: boolean
+) => {
+  const markLength = 3;
+  pdf.setDrawColor(200, 0, 0);
+  pdf.setLineWidth(0.3);
+
+  // Calculate inner rectangle (main area without overlap)
+  const innerX = imgX + (hasLeft ? overlapX : 0);
+  const innerY = imgY + (hasTop ? overlapY : 0);
+  const innerWidth = imgWidth - (hasLeft ? overlapX : 0) - (hasRight ? overlapX : 0);
+  const innerHeight = imgHeight - (hasTop ? overlapY : 0) - (hasBottom ? overlapY : 0);
+
+  // Top-left corner marks (if has top or left overlap)
+  if (hasTop || hasLeft) {
+    pdf.line(innerX - markLength, innerY, innerX + markLength, innerY);
+    pdf.line(innerX, innerY - markLength, innerX, innerY + markLength);
+  }
+
+  // Top-right corner marks (if has top or right overlap)
+  if (hasTop || hasRight) {
+    const x = innerX + innerWidth;
+    pdf.line(x - markLength, innerY, x + markLength, innerY);
+    pdf.line(x, innerY - markLength, x, innerY + markLength);
+  }
+
+  // Bottom-left corner marks (if has bottom or left overlap)
+  if (hasBottom || hasLeft) {
+    const y = innerY + innerHeight;
+    pdf.line(innerX - markLength, y, innerX + markLength, y);
+    pdf.line(innerX, y - markLength, innerX, y + markLength);
+  }
+
+  // Bottom-right corner marks (if has bottom or right overlap)
+  if (hasBottom || hasRight) {
+    const x = innerX + innerWidth;
+    const y = innerY + innerHeight;
+    pdf.line(x - markLength, y, x + markLength, y);
+    pdf.line(x, y - markLength, x, y + markLength);
+  }
+};
+
+const addDashedBorder = (
+  pdf: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  pdf.setDrawColor(100, 100, 100);
+  pdf.setLineWidth(0.2);
   
-  pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.1);
+  const dashLength = 2;
+  const gapLength = 2;
   
-  // Top-left corner
-  pdf.line(margin - markOffset - markLength, margin, margin - markOffset, margin);
-  pdf.line(margin, margin - markOffset - markLength, margin, margin - markOffset);
+  // Draw dashed lines manually
+  const drawDashedLine = (x1: number, y1: number, x2: number, y2: number) => {
+    const totalLength = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    const numSegments = Math.floor(totalLength / (dashLength + gapLength));
+    const dx = (x2 - x1) / totalLength;
+    const dy = (y2 - y1) / totalLength;
+    
+    for (let i = 0; i < numSegments; i++) {
+      const startX = x1 + dx * i * (dashLength + gapLength);
+      const startY = y1 + dy * i * (dashLength + gapLength);
+      const endX = startX + dx * dashLength;
+      const endY = startY + dy * dashLength;
+      pdf.line(startX, startY, endX, endY);
+    }
+  };
   
-  // Top-right corner
-  pdf.line(pageWidth - margin + markOffset, margin, pageWidth - margin + markOffset + markLength, margin);
-  pdf.line(pageWidth - margin, margin - markOffset - markLength, pageWidth - margin, margin - markOffset);
-  
-  // Bottom-left corner
-  pdf.line(margin - markOffset - markLength, pageHeight - margin, margin - markOffset, pageHeight - margin);
-  pdf.line(margin, pageHeight - margin + markOffset, margin, pageHeight - margin + markOffset + markLength);
-  
-  // Bottom-right corner
-  pdf.line(pageWidth - margin + markOffset, pageHeight - margin, pageWidth - margin + markOffset + markLength, pageHeight - margin);
-  pdf.line(pageWidth - margin, pageHeight - margin + markOffset, pageWidth - margin, pageHeight - margin + markOffset + markLength);
+  // Top line
+  drawDashedLine(x, y, x + width, y);
+  // Right line
+  drawDashedLine(x + width, y, x + width, y + height);
+  // Bottom line
+  drawDashedLine(x + width, y + height, x, y + height);
+  // Left line
+  drawDashedLine(x, y + height, x, y);
 };
 
 const addSummaryPage = (pdf: jsPDF, imgData: string, options: PrintOptions) => {
@@ -150,8 +217,8 @@ const generateFromImage = async (
         const imgWidth = img.width;
         const imgHeight = img.height;
 
-        const cellWidth = imgWidth / options.columns;
-        const cellHeight = imgHeight / options.rows;
+        const baseCellWidth = imgWidth / options.columns;
+        const baseCellHeight = imgHeight / options.rows;
 
         // Create canvas for cropping
         const canvas = document.createElement("canvas");
@@ -164,28 +231,16 @@ const generateFromImage = async (
               pdf.addPage();
             }
 
-            const x = col * cellWidth;
-            const y = row * cellHeight;
+            // Calculate base cell position
+            const baseX = col * baseCellWidth;
+            const baseY = row * baseCellHeight;
 
-            canvas.width = cellWidth;
-            canvas.height = cellHeight;
-
-            // Draw the cropped portion
-            ctx.drawImage(
-              img,
-              x, y, cellWidth, cellHeight,
-              0, 0, cellWidth, cellHeight
-            );
-
-            const imgData = canvas.toDataURL("image/jpeg", 0.95);
-            
-            // Calculate dimensions to fit within printable area (with margins)
+            // Calculate dimensions to fit within printable area
             const margin = 10;
             const printableWidth = pageWidth - (margin * 2);
             const printableHeight = pageHeight - (margin * 2) - 15;
             
-            const imgAspect = cellWidth / cellHeight;
-            const printableAspect = printableWidth / printableHeight;
+            const imgAspect = baseCellWidth / baseCellHeight;
             
             let finalWidth = printableWidth;
             let finalHeight = printableWidth / imgAspect;
@@ -195,13 +250,72 @@ const generateFromImage = async (
               finalWidth = printableHeight * imgAspect;
             }
 
-            const xOffset = margin + (printableWidth - finalWidth) / 2;
-            const yOffset = margin + (printableHeight - finalHeight) / 2;
+            // Calculate overlap in pixels (relative to printed size)
+            const overlapPixelsX = (options.overlap * baseCellWidth) / finalWidth;
+            const overlapPixelsY = (options.overlap * baseCellHeight) / finalHeight;
 
-            pdf.addImage(imgData, "JPEG", xOffset, yOffset, finalWidth, finalHeight);
+            // Determine which sides have adjacent cells (for overlap)
+            const hasLeft = col > 0;
+            const hasRight = col < options.columns - 1;
+            const hasTop = row > 0;
+            const hasBottom = row < options.rows - 1;
 
-            // Add crop marks
-            addCropMarks(pdf, pageWidth, pageHeight, margin);
+            // Calculate actual crop area with overlap
+            const cropX = Math.max(0, baseX - (hasLeft ? overlapPixelsX : 0));
+            const cropY = Math.max(0, baseY - (hasTop ? overlapPixelsY : 0));
+            const cropWidth = Math.min(
+              baseCellWidth + (hasLeft ? overlapPixelsX : 0) + (hasRight ? overlapPixelsX : 0),
+              imgWidth - cropX
+            );
+            const cropHeight = Math.min(
+              baseCellHeight + (hasTop ? overlapPixelsY : 0) + (hasBottom ? overlapPixelsY : 0),
+              imgHeight - cropY
+            );
+
+            canvas.width = cropWidth;
+            canvas.height = cropHeight;
+
+            // Draw the cropped portion with overlap
+            ctx.drawImage(
+              img,
+              cropX, cropY, cropWidth, cropHeight,
+              0, 0, cropWidth, cropHeight
+            );
+
+            const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+            // Calculate final dimensions maintaining aspect ratio of cropped area
+            const cropAspect = cropWidth / cropHeight;
+            let finalCropWidth = printableWidth;
+            let finalCropHeight = printableWidth / cropAspect;
+            
+            if (finalCropHeight > printableHeight) {
+              finalCropHeight = printableHeight;
+              finalCropWidth = printableHeight * cropAspect;
+            }
+
+            const xOffset = margin + (printableWidth - finalCropWidth) / 2;
+            const yOffset = margin + (printableHeight - finalCropHeight) / 2;
+
+            pdf.addImage(imgData, "JPEG", xOffset, yOffset, finalCropWidth, finalCropHeight);
+
+            // Add dashed border around image
+            addDashedBorder(pdf, xOffset, yOffset, finalCropWidth, finalCropHeight);
+
+            // Calculate overlap dimensions in mm on printed page
+            const overlapMmX = (overlapPixelsX / cropWidth) * finalCropWidth;
+            const overlapMmY = (overlapPixelsY / cropHeight) * finalCropHeight;
+
+            // Add overlap crop marks
+            if (options.overlap > 0) {
+              addOverlapCropMarks(
+                pdf,
+                xOffset, yOffset,
+                finalCropWidth, finalCropHeight,
+                overlapMmX, overlapMmY,
+                hasLeft, hasRight, hasTop, hasBottom
+              );
+            }
 
             // Add cell code (large and prominent)
             const cellCode = getCellCode(col, row);
@@ -271,8 +385,8 @@ const generateFromPDF = async (
       const imgWidth = img.width;
       const imgHeight = img.height;
 
-      const cellWidth = imgWidth / options.columns;
-      const cellHeight = imgHeight / options.rows;
+      const baseCellWidth = imgWidth / options.columns;
+      const baseCellHeight = imgHeight / options.rows;
 
       const cropCanvas = document.createElement("canvas");
       const cropCtx = cropCanvas.getContext("2d")!;
@@ -284,27 +398,16 @@ const generateFromPDF = async (
             pdf.addPage();
           }
 
-          const x = col * cellWidth;
-          const y = row * cellHeight;
+          // Calculate base cell position
+          const baseX = col * baseCellWidth;
+          const baseY = row * baseCellHeight;
 
-          cropCanvas.width = cellWidth;
-          cropCanvas.height = cellHeight;
-
-          cropCtx.drawImage(
-            img,
-            x, y, cellWidth, cellHeight,
-            0, 0, cellWidth, cellHeight
-          );
-
-          const croppedData = cropCanvas.toDataURL("image/jpeg", 0.95);
-          
-          // Calculate dimensions to fit within printable area (with margins)
+          // Calculate dimensions to fit within printable area
           const margin = 10;
           const printableWidth = pageWidth - (margin * 2);
           const printableHeight = pageHeight - (margin * 2) - 15;
           
-          const imgAspect = cellWidth / cellHeight;
-          const printableAspect = printableWidth / printableHeight;
+          const imgAspect = baseCellWidth / baseCellHeight;
           
           let finalWidth = printableWidth;
           let finalHeight = printableWidth / imgAspect;
@@ -314,13 +417,71 @@ const generateFromPDF = async (
             finalWidth = printableHeight * imgAspect;
           }
 
-          const xOffset = margin + (printableWidth - finalWidth) / 2;
-          const yOffset = margin + (printableHeight - finalHeight) / 2;
+          // Calculate overlap in pixels (relative to printed size)
+          const overlapPixelsX = (options.overlap * baseCellWidth) / finalWidth;
+          const overlapPixelsY = (options.overlap * baseCellHeight) / finalHeight;
 
-          pdf.addImage(croppedData, "JPEG", xOffset, yOffset, finalWidth, finalHeight);
+          // Determine which sides have adjacent cells (for overlap)
+          const hasLeft = col > 0;
+          const hasRight = col < options.columns - 1;
+          const hasTop = row > 0;
+          const hasBottom = row < options.rows - 1;
 
-          // Add crop marks
-          addCropMarks(pdf, pageWidth, pageHeight, margin);
+          // Calculate actual crop area with overlap
+          const cropX = Math.max(0, baseX - (hasLeft ? overlapPixelsX : 0));
+          const cropY = Math.max(0, baseY - (hasTop ? overlapPixelsY : 0));
+          const cropWidth = Math.min(
+            baseCellWidth + (hasLeft ? overlapPixelsX : 0) + (hasRight ? overlapPixelsX : 0),
+            imgWidth - cropX
+          );
+          const cropHeight = Math.min(
+            baseCellHeight + (hasTop ? overlapPixelsY : 0) + (hasBottom ? overlapPixelsY : 0),
+            imgHeight - cropY
+          );
+
+          cropCanvas.width = cropWidth;
+          cropCanvas.height = cropHeight;
+
+          cropCtx.drawImage(
+            img,
+            cropX, cropY, cropWidth, cropHeight,
+            0, 0, cropWidth, cropHeight
+          );
+
+          const croppedData = cropCanvas.toDataURL("image/jpeg", 0.95);
+          
+          // Calculate final dimensions maintaining aspect ratio of cropped area
+          const cropAspect = cropWidth / cropHeight;
+          let finalCropWidth = printableWidth;
+          let finalCropHeight = printableWidth / cropAspect;
+          
+          if (finalCropHeight > printableHeight) {
+            finalCropHeight = printableHeight;
+            finalCropWidth = printableHeight * cropAspect;
+          }
+
+          const xOffset = margin + (printableWidth - finalCropWidth) / 2;
+          const yOffset = margin + (printableHeight - finalCropHeight) / 2;
+
+          pdf.addImage(croppedData, "JPEG", xOffset, yOffset, finalCropWidth, finalCropHeight);
+
+          // Add dashed border around image
+          addDashedBorder(pdf, xOffset, yOffset, finalCropWidth, finalCropHeight);
+
+          // Calculate overlap dimensions in mm on printed page
+          const overlapMmX = (overlapPixelsX / cropWidth) * finalCropWidth;
+          const overlapMmY = (overlapPixelsY / cropHeight) * finalCropHeight;
+
+          // Add overlap crop marks
+          if (options.overlap > 0) {
+            addOverlapCropMarks(
+              pdf,
+              xOffset, yOffset,
+              finalCropWidth, finalCropHeight,
+              overlapMmX, overlapMmY,
+              hasLeft, hasRight, hasTop, hasBottom
+            );
+          }
 
           // Add cell code (large and prominent)
           const cellCode = getCellCode(col, row);
