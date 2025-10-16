@@ -40,7 +40,7 @@ const addOverlapCropMarks = (
   const innerWidth = imgWidth - (hasLeft ? overlapX : 0) - (hasRight ? overlapX : 0);
   const innerHeight = imgHeight - (hasTop ? overlapY : 0) - (hasBottom ? overlapY : 0);
 
-  // Left edge marks (if has left overlap)
+  // Left edge marks (if has left overlap) - always draw right side too
   if (hasLeft) {
     // Top mark on left edge
     pdf.line(imgX, innerY, imgX - markLength, innerY);
@@ -50,9 +50,19 @@ const addOverlapCropMarks = (
     const y = innerY + innerHeight;
     pdf.line(imgX, y, imgX - markLength, y);
     pdf.line(imgX, y - markLength, imgX, y + markLength);
+    
+    // Mirror marks on right edge
+    const x = imgX + imgWidth;
+    // Top mark on right edge
+    pdf.line(x, innerY, x + markLength, innerY);
+    pdf.line(x, innerY - markLength, x, innerY + markLength);
+    
+    // Bottom mark on right edge
+    pdf.line(x, y, x + markLength, y);
+    pdf.line(x, y - markLength, x, y + markLength);
   }
 
-  // Right edge marks (if has right overlap)
+  // Right edge marks (if has right overlap) - always draw left side too
   if (hasRight) {
     const x = imgX + imgWidth;
     // Top mark on right edge
@@ -63,9 +73,18 @@ const addOverlapCropMarks = (
     const y = innerY + innerHeight;
     pdf.line(x, y, x + markLength, y);
     pdf.line(x, y - markLength, x, y + markLength);
+    
+    // Mirror marks on left edge
+    // Top mark on left edge
+    pdf.line(imgX, innerY, imgX - markLength, innerY);
+    pdf.line(imgX, innerY - markLength, imgX, innerY + markLength);
+    
+    // Bottom mark on left edge
+    pdf.line(imgX, y, imgX - markLength, y);
+    pdf.line(imgX, y - markLength, imgX, y + markLength);
   }
 
-  // Top edge marks (if has top overlap)
+  // Top edge marks (if has top overlap) - always draw bottom side too
   if (hasTop) {
     // Left mark on top edge
     pdf.line(innerX, imgY, innerX, imgY - markLength);
@@ -75,9 +94,19 @@ const addOverlapCropMarks = (
     const x = innerX + innerWidth;
     pdf.line(x, imgY, x, imgY - markLength);
     pdf.line(x - markLength, imgY, x + markLength, imgY);
+    
+    // Mirror marks on bottom edge
+    const y = imgY + imgHeight;
+    // Left mark on bottom edge
+    pdf.line(innerX, y, innerX, y + markLength);
+    pdf.line(innerX - markLength, y, innerX + markLength, y);
+    
+    // Right mark on bottom edge
+    pdf.line(x, y, x, y + markLength);
+    pdf.line(x - markLength, y, x + markLength, y);
   }
 
-  // Bottom edge marks (if has bottom overlap)
+  // Bottom edge marks (if has bottom overlap) - always draw top side too
   if (hasBottom) {
     const y = imgY + imgHeight;
     // Left mark on bottom edge
@@ -88,6 +117,15 @@ const addOverlapCropMarks = (
     const x = innerX + innerWidth;
     pdf.line(x, y, x, y + markLength);
     pdf.line(x - markLength, y, x + markLength, y);
+    
+    // Mirror marks on top edge
+    // Left mark on top edge
+    pdf.line(innerX, imgY, innerX, imgY - markLength);
+    pdf.line(innerX - markLength, imgY, innerX + markLength, imgY);
+    
+    // Right mark on top edge
+    pdf.line(x, imgY, x, imgY - markLength);
+    pdf.line(x - markLength, imgY, x + markLength, imgY);
   }
 };
 
