@@ -280,6 +280,21 @@ const generateFromImage = async (
         const baseCellWidth = imgWidth / options.columns;
         const baseCellHeight = imgHeight / options.rows;
 
+        // Calculate FIXED dimensions for ALL cells (to ensure consistency)
+        const margin = 10;
+        const printableWidth = pageWidth - (margin * 2);
+        const printableHeight = pageHeight - (margin * 2) - 15;
+        
+        const baseCellAspect = baseCellWidth / baseCellHeight;
+        
+        let fixedCellWidth = printableWidth;
+        let fixedCellHeight = printableWidth / baseCellAspect;
+        
+        if (fixedCellHeight > printableHeight) {
+          fixedCellHeight = printableHeight;
+          fixedCellWidth = printableHeight * baseCellAspect;
+        }
+
         // Create canvas for cropping
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d")!;
@@ -295,24 +310,9 @@ const generateFromImage = async (
             const baseX = col * baseCellWidth;
             const baseY = row * baseCellHeight;
 
-            // Calculate dimensions to fit within printable area
-            const margin = 10;
-            const printableWidth = pageWidth - (margin * 2);
-            const printableHeight = pageHeight - (margin * 2) - 15;
-            
-            const imgAspect = baseCellWidth / baseCellHeight;
-            
-            let finalWidth = printableWidth;
-            let finalHeight = printableWidth / imgAspect;
-            
-            if (finalHeight > printableHeight) {
-              finalHeight = printableHeight;
-              finalWidth = printableHeight * imgAspect;
-            }
-
             // Calculate overlap in pixels (relative to printed size)
-            const overlapPixelsX = (options.overlap * baseCellWidth) / finalWidth;
-            const overlapPixelsY = (options.overlap * baseCellHeight) / finalHeight;
+            const overlapPixelsX = (options.overlap * baseCellWidth) / fixedCellWidth;
+            const overlapPixelsY = (options.overlap * baseCellHeight) / fixedCellHeight;
 
             // Determine which sides have adjacent cells (for overlap)
             const hasLeft = col > 0;
@@ -344,34 +344,25 @@ const generateFromImage = async (
 
             const imgData = canvas.toDataURL("image/jpeg", 0.95);
 
-            // Calculate final dimensions maintaining aspect ratio of cropped area
-            const cropAspect = cropWidth / cropHeight;
-            let finalCropWidth = printableWidth;
-            let finalCropHeight = printableWidth / cropAspect;
-            
-            if (finalCropHeight > printableHeight) {
-              finalCropHeight = printableHeight;
-              finalCropWidth = printableHeight * cropAspect;
-            }
+            // Use FIXED dimensions for ALL cells to ensure consistency
+            const xOffset = margin + (printableWidth - fixedCellWidth) / 2;
+            const yOffset = margin + (printableHeight - fixedCellHeight) / 2;
 
-            const xOffset = margin + (printableWidth - finalCropWidth) / 2;
-            const yOffset = margin + (printableHeight - finalCropHeight) / 2;
-
-            pdf.addImage(imgData, "JPEG", xOffset, yOffset, finalCropWidth, finalCropHeight);
+            pdf.addImage(imgData, "JPEG", xOffset, yOffset, fixedCellWidth, fixedCellHeight);
 
             // Add dashed border around image
-            addDashedBorder(pdf, xOffset, yOffset, finalCropWidth, finalCropHeight);
+            addDashedBorder(pdf, xOffset, yOffset, fixedCellWidth, fixedCellHeight);
 
             // Calculate overlap dimensions in mm on printed page
-            const overlapMmX = (overlapPixelsX / cropWidth) * finalCropWidth;
-            const overlapMmY = (overlapPixelsY / cropHeight) * finalCropHeight;
+            const overlapMmX = (overlapPixelsX / cropWidth) * fixedCellWidth;
+            const overlapMmY = (overlapPixelsY / cropHeight) * fixedCellHeight;
 
             // Add overlap crop marks
             if (options.overlap > 0) {
               addOverlapCropMarks(
                 pdf,
                 xOffset, yOffset,
-                finalCropWidth, finalCropHeight,
+                fixedCellWidth, fixedCellHeight,
                 overlapMmX, overlapMmY,
                 hasLeft, hasRight, hasTop, hasBottom
               );
@@ -448,6 +439,21 @@ const generateFromPDF = async (
       const baseCellWidth = imgWidth / options.columns;
       const baseCellHeight = imgHeight / options.rows;
 
+      // Calculate FIXED dimensions for ALL cells (to ensure consistency)
+      const margin = 10;
+      const printableWidth = pageWidth - (margin * 2);
+      const printableHeight = pageHeight - (margin * 2) - 15;
+      
+      const baseCellAspect = baseCellWidth / baseCellHeight;
+      
+      let fixedCellWidth = printableWidth;
+      let fixedCellHeight = printableWidth / baseCellAspect;
+      
+      if (fixedCellHeight > printableHeight) {
+        fixedCellHeight = printableHeight;
+        fixedCellWidth = printableHeight * baseCellAspect;
+      }
+
       const cropCanvas = document.createElement("canvas");
       const cropCtx = cropCanvas.getContext("2d")!;
 
@@ -462,24 +468,9 @@ const generateFromPDF = async (
           const baseX = col * baseCellWidth;
           const baseY = row * baseCellHeight;
 
-          // Calculate dimensions to fit within printable area
-          const margin = 10;
-          const printableWidth = pageWidth - (margin * 2);
-          const printableHeight = pageHeight - (margin * 2) - 15;
-          
-          const imgAspect = baseCellWidth / baseCellHeight;
-          
-          let finalWidth = printableWidth;
-          let finalHeight = printableWidth / imgAspect;
-          
-          if (finalHeight > printableHeight) {
-            finalHeight = printableHeight;
-            finalWidth = printableHeight * imgAspect;
-          }
-
           // Calculate overlap in pixels (relative to printed size)
-          const overlapPixelsX = (options.overlap * baseCellWidth) / finalWidth;
-          const overlapPixelsY = (options.overlap * baseCellHeight) / finalHeight;
+          const overlapPixelsX = (options.overlap * baseCellWidth) / fixedCellWidth;
+          const overlapPixelsY = (options.overlap * baseCellHeight) / fixedCellHeight;
 
           // Determine which sides have adjacent cells (for overlap)
           const hasLeft = col > 0;
@@ -510,34 +501,25 @@ const generateFromPDF = async (
 
           const croppedData = cropCanvas.toDataURL("image/jpeg", 0.95);
           
-          // Calculate final dimensions maintaining aspect ratio of cropped area
-          const cropAspect = cropWidth / cropHeight;
-          let finalCropWidth = printableWidth;
-          let finalCropHeight = printableWidth / cropAspect;
-          
-          if (finalCropHeight > printableHeight) {
-            finalCropHeight = printableHeight;
-            finalCropWidth = printableHeight * cropAspect;
-          }
+          // Use FIXED dimensions for ALL cells to ensure consistency
+          const xOffset = margin + (printableWidth - fixedCellWidth) / 2;
+          const yOffset = margin + (printableHeight - fixedCellHeight) / 2;
 
-          const xOffset = margin + (printableWidth - finalCropWidth) / 2;
-          const yOffset = margin + (printableHeight - finalCropHeight) / 2;
-
-          pdf.addImage(croppedData, "JPEG", xOffset, yOffset, finalCropWidth, finalCropHeight);
+          pdf.addImage(croppedData, "JPEG", xOffset, yOffset, fixedCellWidth, fixedCellHeight);
 
           // Add dashed border around image
-          addDashedBorder(pdf, xOffset, yOffset, finalCropWidth, finalCropHeight);
+          addDashedBorder(pdf, xOffset, yOffset, fixedCellWidth, fixedCellHeight);
 
           // Calculate overlap dimensions in mm on printed page
-          const overlapMmX = (overlapPixelsX / cropWidth) * finalCropWidth;
-          const overlapMmY = (overlapPixelsY / cropHeight) * finalCropHeight;
+          const overlapMmX = (overlapPixelsX / cropWidth) * fixedCellWidth;
+          const overlapMmY = (overlapPixelsY / cropHeight) * fixedCellHeight;
 
           // Add overlap crop marks
           if (options.overlap > 0) {
             addOverlapCropMarks(
               pdf,
               xOffset, yOffset,
-              finalCropWidth, finalCropHeight,
+              fixedCellWidth, fixedCellHeight,
               overlapMmX, overlapMmY,
               hasLeft, hasRight, hasTop, hasBottom
             );
